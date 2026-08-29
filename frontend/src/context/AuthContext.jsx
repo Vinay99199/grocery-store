@@ -1,23 +1,25 @@
-import React, { createContext, useState, useEffect } from 'react';
-import { getCurrentUser } from '../services/authService';
+import { createContext, useState, useCallback, useEffect } from 'react';
+import api from '../services/api';
 
-export const AuthContext = createContext();
+const AuthContext = createContext();
 
-export function AuthProvider({ children }) {
+export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
+  // Check if user is already logged in
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const response = await getCurrentUser();
-        if (response.data.success) {
-          setUser(response.data.data);
+        const token = localStorage.getItem('token');
+        if (token) {
+          const response = await api.get('/auth/me');
+          if (response.data.success) {
+            setUser(response.data.data);
+          }
         }
-      } catch (err) {
-        // User not authenticated
-        setUser(null);
+      } catch (error) {
+        localStorage.removeItem('token');
       } finally {
         setLoading(false);
       }
@@ -26,15 +28,36 @@ export function AuthProvider({ children }) {
     checkAuth();
   }, []);
 
+  const login = useCallback((userData) => {
+    setUser(userData);
+    // Note: Token is set via cookie by backend
+  }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setUser(null);
+      localStorage.removeItem('token');
+    }
+  }, []);
+
   const value = {
     user,
-    setUser,
     loading,
-    error,
-    setError,
+    login,
+    logout,
     isAuthenticated: !!user,
     isAdmin: user?.role === 'admin'
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export default AuthContext;
