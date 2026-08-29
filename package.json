@@ -1,0 +1,26 @@
+{
+  "name": "grocery-store",
+  "version": "1.0.0",
+  "description": "A complete production-style Grocery Store Web Application built with MERN Stack",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "backend": "npm run dev --prefix backend",
+    "frontend": "npm run dev --prefix frontend",
+    "build": "npm run build --prefix frontend"
+  },
+  "keywords": [
+    "grocery",
+    "ecommerce",
+    "mern",
+    "react",
+    "express",
+    "mongodb"
+  ],
+  "author": "Vinay",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.1"
+  }
+}
