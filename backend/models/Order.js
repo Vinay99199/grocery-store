@@ -1,87 +1,82 @@
 import mongoose from 'mongoose';
 
-const orderItemSchema = new mongoose.Schema({
-  product: {
+const orderSchema = new mongoose.Schema({
+  user: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Product',
+    ref: 'User',
     required: true
   },
-  productName: String,
-  quantity: {
-    type: Number,
-    required: true,
-    min: 1
+  items: [{
+    product: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Product',
+      required: true
+    },
+    quantity: {
+      type: Number,
+      required: true
+    },
+    price: {
+      type: Number,
+      required: true
+    }
+  }],
+  deliveryAddress: {
+    house: String,
+    area: String,
+    landmark: String,
+    city: String,
+    pincode: String
   },
-  priceAtPurchase: {
+  customerNotes: String,
+  subtotal: {
     type: Number,
     required: true
+  },
+  deliveryCharge: {
+    type: Number,
+    default: 0
+  },
+  totalPrice: {
+    type: Number,
+    required: true
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'delivered', 'cancelled'],
+    default: 'pending'
+  },
+  paymentMethod: {
+    type: String,
+    enum: ['cod', 'online'],
+    required: true
+  },
+  paymentStatus: {
+    type: String,
+    enum: ['pending', 'completed', 'failed'],
+    default: 'pending'
+  },
+  deliveryOTP: String,
+  deliveredAt: Date,
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
   }
 });
 
-const orderSchema = new mongoose.Schema(
-  {
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true
-    },
-    items: [orderItemSchema],
-    deliveryAddress: {
-      name: String,
-      phone: String,
-      house: String,
-      area: String,
-      landmark: String,
-      city: String,
-      pincode: String
-    },
-    customerNote: {
-      type: String,
-      default: ''
-    },
-    subtotal: {
-      type: Number,
-      required: true
-    },
-    deliveryCharge: {
-      type: Number,
-      default: 0
-    },
-    totalAmount: {
-      type: Number,
-      required: true
-    },
-    paymentMethod: {
-      type: String,
-      enum: ['ONLINE', 'COD'],
-      required: true
-    },
-    paymentStatus: {
-      type: String,
-      enum: ['PENDING', 'PAID', 'FAILED', 'REFUNDED'],
-      default: 'PENDING'
-    },
-    orderStatus: {
-      type: String,
-      enum: ['PLACED', 'CONFIRMED', 'PREPARING', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED'],
-      default: 'PLACED'
-    },
-    deliveryOtp: {
-      type: String,
-      default: null,
-      select: false // Don't expose OTP in normal queries
-    },
-    otpVerified: {
-      type: Boolean,
-      default: false
-    },
-    deliveredAt: {
-      type: Date,
-      default: null
-    }
-  },
-  { timestamps: true }
-);
+orderSchema.pre('save', function(next) {
+  this.updatedAt = Date.now();
+  next();
+});
+
+orderSchema.pre(/^find/, function(next) {
+  this.populate('items.product', 'name price unit image');
+  next();
+});
 
 const Order = mongoose.model('Order', orderSchema);
 export default Order;
