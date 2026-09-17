@@ -3,31 +3,14 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from './ProtectedRoute';
 import { useAuth } from '../hooks/useAuth';
 
-// Pages - will be created in subsequent stages
-// Placeholder for now
-function Home() {
-  return <div className="p-8">Home Page (Coming Soon)</div>;
-}
-
-function Shop() {
-  return <div className="p-8">Shop Page (Coming Soon)</div>;
-}
-
-function Login() {
-  return <div className="p-8">Login Page (Coming Soon)</div>;
-}
-
-function Register() {
-  return <div className="p-8">Register Page (Coming Soon)</div>;
-}
-
-function AdminDashboard() {
-  return <div className="p-8">Admin Dashboard (Coming Soon)</div>;
-}
-
-function NotFound() {
-  return <div className="p-8 text-center">404 - Page Not Found</div>;
-}
+// Pages
+import Home from '../pages/Home';
+import Products from '../pages/Products';
+import Wishlist from '../pages/Wishlist';
+import Login from '../pages/Login';
+import Register from '../pages/Register';
+import AdminDashboard from '../pages/AdminDashboard';
+import NotFound from '../pages/NotFound';
 
 function AppRoutes() {
   const { loading } = useAuth();
@@ -45,13 +28,12 @@ function AppRoutes() {
 
   return (
     <Routes>
-      {/* Public Routes */}
       <Route path="/" element={<Home />} />
-      <Route path="/shop" element={<Shop />} />
+      <Route path="/shop" element={<Products />} />
+      <Route path="/wishlist" element={<ProtectedRoute><Wishlist /></ProtectedRoute>} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
-      {/* Protected Admin Routes */}
       <Route
         path="/admin"
         element={
@@ -61,7 +43,6 @@ function AppRoutes() {
         }
       />
 
-      {/* Catch all */}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
