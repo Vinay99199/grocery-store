@@ -3,6 +3,7 @@ import Cart from '../models/Cart.js';
 import User from '../models/User.js';
 import Product from '../models/Product.js';
 import { calculateDeliveryCharge } from '../utils/deliveryRules.js';
+import { createNotification } from '../services/notificationService.js';
 
 export const createOrder = async (req, res, next) => {
   try {
@@ -25,7 +26,6 @@ export const createOrder = async (req, res, next) => {
       });
     }
 
-    // Verify stock availability
     for (const item of cart.items) {
       const product = await Product.findById(item.product);
       if (!product || product.stock < item.quantity) {
@@ -36,7 +36,6 @@ export const createOrder = async (req, res, next) => {
       }
     }
 
-    // Calculate delivery charge
     let deliveryCharge = 0;
     try {
       deliveryCharge = calculateDeliveryCharge(cart.totalPrice, user.weeklyPurchaseAmount);
@@ -49,7 +48,6 @@ export const createOrder = async (req, res, next) => {
 
     const totalPrice = cart.totalPrice + deliveryCharge;
 
-    // Create order
     const order = new Order({
       user: req.user.id,
       items: cart.items,
@@ -64,23 +62,24 @@ export const createOrder = async (req, res, next) => {
 
     await order.save();
 
-    // Update user weekly purchase amount
     user.weeklyPurchaseAmount += cart.totalPrice;
     user.totalPurchaseAmount += cart.totalPrice;
     await user.save();
 
-    // Reduce product stock
     for (const item of cart.items) {
-      await Product.findByIdAndUpdate(
-        item.product,
-        { $inc: { stock: -item.quantity } }
-      );
+      await Product.findByIdAndUpdate(item.product, { $inc: { stock: -item.quantity } });
     }
 
-    // Clear cart
     cart.items = [];
     cart.totalPrice = 0;
     await cart.save();
+
+    await createNotification(
+      req.user.id,
+      'Order Placed',
+      `Your order ${order._id} has been placed successfully and is now pending confirmation.`,
+      'order'
+    );
 
     res.status(201).json({
       success: true,
@@ -114,7 +113,6 @@ export const getOrderById = async (req, res, next) => {
       });
     }
 
-    // Check if order belongs to user
     if (order.user.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
@@ -160,6 +158,13 @@ export const updateOrderStatus = async (req, res, next) => {
       await order.save();
     }
 
+    await createNotification(
+      order.user,
+      'Order Status Updated',
+      `Your order ${order._id} status updated to ${status.replace(/_/g, ' ')}.`,
+      'delivery'
+    );
+
     res.json({
       success: true,
       message: 'Order status updated',
@@ -180,7 +185,6 @@ export const cancelOrder = async (req, res, next) => {
       });
     }
 
-    // Check if order belongs to user
     if (order.user.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
@@ -188,7 +192,6 @@ export const cancelOrder = async (req, res, next) => {
       });
     }
 
-    // Only allow cancellation of pending orders
     if (order.status !== 'pending') {
       return res.status(400).json({
         success: false,
@@ -196,17 +199,19 @@ export const cancelOrder = async (req, res, next) => {
       });
     }
 
-    // Restore stock
     for (const item of order.items) {
-      await Product.findByIdAndUpdate(
-        item.product,
-        { $inc: { stock: item.quantity } }
-      );
+      await Product.findByIdAndUpdate(item.product, { $inc: { stock: item.quantity } });
     }
 
-    // Update order status
     order.status = 'cancelled';
     await order.save();
+
+    await createNotification(
+      order.user,
+      'Order Cancelled',
+      `Your order ${order._id} has been cancelled successfully.`,
+      'order'
+    );
 
     res.json({
       success: true,
